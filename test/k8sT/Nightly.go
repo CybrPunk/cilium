@@ -390,8 +390,8 @@ var _ = Describe("NightlyExamples", func() {
 					var assertUpgradeSuccessful func()
 					assertUpgradeSuccessful, cleanupCallback = InstallAndValidateCiliumUpgrades(
 						kubectl,
-						imageVersion,
 						chartVersion,
+						imageVersion,
 						helpers.CiliumLatestHelmChartVersion,
 						helpers.CiliumLatestImageVersion,
 					)
