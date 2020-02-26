@@ -45,7 +45,7 @@ hook see :ref:`bpf_guide`.
   tc ingress hook can be coupled with above XDP hook. When this is done it
   is reasonable to assume that the majority of the traffic at this
   point is legitimate and destined for the host.
-  
+
   Containers typically use a virtual device called a veth pair which acts
   as a virtual wire connecting the container to the host. By attaching to
   the TC ingress hook of the host side of this veth pair Cilium can monitor
@@ -54,7 +54,7 @@ hook see :ref:`bpf_guide`.
   network traffic to the host side virtual devices with another BPF program
   attached to the tc ingress hook as well Cilium can monitor and enforce
   policy on all traffic entering or exiting the node.
-  
+
   Depending on the use case, containers may also be connected through ipvlan
   devices instead of a veth pair. In this mode, the physical device in the
   host is the ipvlan master where virtual ipvlan devices in slave mode are
@@ -243,7 +243,7 @@ BPF Map Limitations
 All BPF maps are created with upper capacity limits. Insertion beyond the limit
 will fail and thus limits the scalability of the datapath. The following table
 shows the default values of the maps. Each limit can be bumped in the source
-code. Configuration options will be added on request if demand arises.
+code.
 
 ======================== ================ =============== =====================================================
 Map Name                 Scope            Default Limit   Scale Implications
@@ -256,6 +256,60 @@ Policy                   endpoint         16k             Max 16k allowed identi
 Proxy Map                node             512k            Max 512k concurrent redirected TCP connections to proxy
 Tunnel                   node             64k             Max 32k nodes (IPv4+IPv6) or 64k nodes (IPv4 or IPv6) across all clusters
 ======================== ================ =============== =====================================================
+
+Connection Tracking
+-------------------
+
+The maximum number of entries in the connection tracking table, as well as the
+default timeout values for an entry, are configurable using the following flags:
+
+================================ ======================================================= ============= ==================
+Flag Name                        Description                                             Default Value Maximum Value
+================================ ======================================================= ============= ==================
+--bpf-ct-global-any-max          Maximum number of entries in non-TCP CT table           262144
+--bpf-ct-global-tcp-max          Maximum number of entries in TCP CT table               1000000
+--bpf-ct-timeout-regular-any     Timeout for entries in non-TCP CT table                 1m0s
+--bpf-ct-timeout-regular-tcp     Timeout for established entries in TCP CT table         6h0m0s
+--bpf-ct-timeout-regular-tcp-fin Teardown timeout for entries in TCP CT table            10s
+--bpf-ct-timeout-regular-tcp-syn Establishment timeout for entries in TCP CT table       1m0s
+--bpf-ct-timeout-service-any     Timeout for service entries in non-TCP CT table         1m0s
+--bpf-ct-timeout-service-tcp     Timeout for established service entries in TCP CT table 6h0m0s
+--conntrack-gc-interval          Overwrite the CT garbage collection interval
+================================ ======================================================= ============= ==================
+
+Policy
+--------------------
+
+The maximum number of endpoint policy maps (per endpoint) is configurable by
+changing the value of `--bpf-policy-map-max`. The default value is 16,384 and
+supports a maximum value of (TODO:max). It is suggested only to modify this
+value when (TODO;why?).
+
+
+Additional Considerations for Running at Scale
+----------------------------------------------
+
+Clusters with more than 250 nodes, 5,000 pods or 1,000 defined services should
+apply the following configuration changes in order to achieve better stability
+and scalability.
+
+1. The key-value store used for backing cilium should use etcd instead of
+   Kubernetes CRDs by setting the `--kvstore etcd` flag for both `cilium-agent`
+   and `cilium-operator`. This can be done by running etcd as a `Managed Service <https://docs.cilium.io/en/v1.7/gettingstarted/k8s-install-etcd-operator/>`_
+   or an `External Service <https://docs.cilium.io/en/v1.7/gettingstarted/k8s-install-external-etcd/>`_.
+   It is also necessary to specify a `configuration file <https://docs.cilium.io/en/stable/cmdref/kvstore/>`.
+
+2. --disable-cnp-status-updates (cilium-operator --cnp-node-status-gc=false)
+
+3. --enable-k8s-event-handover (https://github.com/cilium/cilium/issues/8247)
+
+4. --monitor-aggregation
+
+5. --enable-node-port
+
+6. --policy-queue-size
+
+
 
 Kubernetes Integration
 ======================
